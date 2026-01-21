@@ -32,10 +32,17 @@ export default function setupSocket(io) {
       }
     });
 
+    socket.on("driverLocation", ({email, data}) => {
+     // console.log(email, data)
+      const user = users.find((u) => u.email === email);
+      io.to(user.socketId).emit("driverLocation", data);
+    });
+
     // Remove user on disconnect
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
       users = users.filter((u) => u.socketId !== socket.id);
     });
+  
   });
 }
