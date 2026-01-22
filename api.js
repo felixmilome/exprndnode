@@ -172,6 +172,26 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
+
+  router.post(rideRoute, async (req, res) => {
+    try {
+      const ride = req?.body;
+  
+      if (!ride) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+  
+      const response = await sql`
+      INSERT INTO rides ${sql(rideData)}
+      RETURNING *;
+    `;
+  
+      res.status(201).json({ data: response[0] });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
   
 
 export default router;

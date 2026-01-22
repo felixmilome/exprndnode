@@ -3,6 +3,7 @@ export default function setupSocket(io) {
   // In-memory storage for connected users
   // Each user: { email, socketId }
   let users = [];
+  const userLocations = new Map();
 
   console.log(users);
   io.on("connection", (socket) => {
@@ -38,11 +39,51 @@ export default function setupSocket(io) {
       io.to(user.socketId).emit("driverLocation", data);
     });
 
+     // LOCATIONS ============================
+
+     // When client updates location
+     socket.on("user:location:update", (data) => {
+      const { user_id, lat, lng, timestamp } = data;
+      userLocations.set(user_id, { lat, lng, timestamp });
+      // Optionally: broadcast to nearby users
+      // io.emit("user:location:broadcast", { user_id, lat, lng });
+    });
+
+      // When a client requests a user's location
+    socket.on("get:user:location", ({ user_id }, callback) => {
+      const location = userLocations.get(user_id) || null;
+      callback(location); // this is your "return" from socket.emit
+    });
+
+    // accept ride
+    socket.on("accept:ride", (ride) => {
+      console.log("Client disconnected:", socket.id);
+      const user = users.find((u) => u.email === email || u.user_id === ride?.user_id);
+      if (user) {
+        io.to(user.socketId).emit("ride:accepted", ride);
+      }
+    });
+
+    // accept ride
+    socket.on("request:ride", (ride) => {
+      console.log("Client disconnected:", socket.id);
+      const user = users.find((u) => u.email === email || u.user_id === ride?.user_id);
+      if (user) {
+        io.to(user.socketId).emit("ride:requested", ride);
+      }
+    });
+  
+
     // Remove user on disconnect
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);
       users = users.filter((u) => u.socketId !== socket.id);
+
     });
+
+ 
+
+   
   
   });
 }
