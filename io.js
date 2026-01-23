@@ -11,10 +11,10 @@ export default function setupSocket(io) {
 
     // Register user with email
     socket.on("register_user", (profile) => {
-      const { email } = profile;
+      const { email, user_id } = profile;
       if (!email) return;
 
-      const existing = users.find((u) => u.email === email);
+      const existing = users.find((u) => u.email === email || u.user_id === user_id);
       if (!existing) {
         users.push({ email, socketId: socket.id });
       } else {
@@ -42,7 +42,7 @@ export default function setupSocket(io) {
      // LOCATIONS ============================
 
      // When client updates location
-     socket.on("user:location:update", (data) => {
+     socket.on("user:location:update", (data) => { 
       const { user_id, lat, lng, timestamp } = data;
       userLocations.set(user_id, { lat, lng, timestamp });
       // Optionally: broadcast to nearby users
@@ -53,7 +53,7 @@ export default function setupSocket(io) {
     socket.on("get:user:location", ({ user_id }, callback) => {
       const location = userLocations.get(user_id) || null;
       callback(location); // this is your "return" from socket.emit
-    });
+    });  
 
     // accept ride
     socket.on("accept:ride", (ride) => {
@@ -62,7 +62,30 @@ export default function setupSocket(io) {
       if (user) {
         io.to(user.socketId).emit("ride:accepted", ride);
       }
-    });
+    }); 
+
+    socket.on("reject:ride", (user_id) => {
+      console.log("Client disconnected:", socket.id);
+      const user = users.find((u) =>  u.user_id === user_id);
+      if (user) {
+        io.to(user.socketId).emit("ride:rejected", ride);
+      }
+    }); 
+
+    socket.on("rider:waiting", (user_id) => {
+      console.log("Client disconnected:", socket.id);
+      const user = users.find((u) =>  u.user_id === user_id);
+      if (user) {
+        io.to(user.socketId).emit("rider:waiting");
+      }
+    }); 
+    socket.on("on:ride", (user_id) => {
+      console.log("Client disconnected:", socket.id);
+      const user = users.find((u) =>  u.user_id === user_id);
+      if (user) {
+        io.to(user.socketId).emit("on:ride");
+      }
+    }); 
 
     // accept ride
     socket.on("request:ride", (ride) => {
@@ -72,6 +95,8 @@ export default function setupSocket(io) {
         io.to(user.socketId).emit("ride:requested", ride);
       }
     });
+
+    
   
 
     // Remove user on disconnect

@@ -171,7 +171,7 @@ router.get(driverRoute, async (req, res) => {
       console.error("Error fetching recent rides:", error);
       res.status(500).json({ error: "Internal Server Error" });
     }
-  });
+  }); 
 
   router.post(rideRoute, async (req, res) => {
     try {
@@ -182,7 +182,7 @@ router.get(driverRoute, async (req, res) => {
       }
   
       const response = await sql`
-      INSERT INTO rides ${sql(rideData)}
+      INSERT INTO rides ${sql(ride)}
       RETURNING *;
     `;
   
