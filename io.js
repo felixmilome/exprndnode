@@ -57,7 +57,7 @@ export default function setupSocket(io) {
 
     // accept ride
     socket.on("accept:ride", (ride) => {
-      console.log("Client disconnected:", socket.id);
+
       const user = users.find((u) => u.email === email || u.user_id === ride?.user_id);
       if (user) {
         io.to(user.socketId).emit("ride:accepted", ride);
@@ -65,7 +65,7 @@ export default function setupSocket(io) {
     }); 
 
     socket.on("reject:ride", (user_id) => {
-      console.log("Client disconnected:", socket.id);
+
       const user = users.find((u) =>  u.user_id === user_id);
       if (user) {
         io.to(user.socketId).emit("ride:rejected", ride);
@@ -73,17 +73,25 @@ export default function setupSocket(io) {
     }); 
 
     socket.on("rider:waiting", (user_id) => {
-      console.log("Client disconnected:", socket.id);
+   
       const user = users.find((u) =>  u.user_id === user_id);
-      if (user) {
+      if (user) { 
         io.to(user.socketId).emit("rider:waiting");
       }
     }); 
     socket.on("on:ride", (user_id) => {
-      console.log("Client disconnected:", socket.id);
+ 
       const user = users.find((u) =>  u.user_id === user_id);
       if (user) {
         io.to(user.socketId).emit("on:ride");
+      }
+    });  
+
+    socket.on("ride:completed", (user_id) => {
+  
+      const user = users.find((u) =>  u.user_id === user_id);
+      if (user) {
+        io.to(user.socketId).emit("ride:completed"); 
       }
     }); 
 

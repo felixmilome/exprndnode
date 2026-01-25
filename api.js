@@ -132,6 +132,8 @@ router.get(driverRoute, async (req, res) => {
     }
   
     try {
+      const rides = await sql `SELECT * from rides WHERE rides.user_id = ${userId} 
+      ORDER BY rides.created_at DESC;`
       // const rides = await sql`
       //   SELECT
       //       rides.ride_id,
@@ -164,7 +166,7 @@ router.get(driverRoute, async (req, res) => {
       //   return res.status(404).json({ error: "No rides found for this user" });
       // }
 
-      const rides = mockrides
+      // const rides = mockrides
   
       res.json({ data: rides });
     } catch (error) {
@@ -192,6 +194,46 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
+
+  router.patch(rideRoute, async (req, res) => {
+    try {
+      const { ride_id, key, value } = req.body;
   
+      if (!ride_id || !key) {
+        return res.status(400).json({ error: "ride_id and key are required" });
+      }
+  
+      // Ensure column name is safe
+      const safeColumn = key; // In production, validate this against allowed columns
+  
+      // Check if user exists
+      const existingRide = await sql`
+        SELECT * FROM rides WHERE ride_id = ${ride_id};
+      `;
+  
+      let result;
+      if (!existingRide[0]) {
+        // Insert if not exists
+        result = await sql`
+          INSERT INTO rides (ride_id, ${sql.unsafe(safeColumn)})
+          VALUES (${ride_id}, ${value})
+          RETURNING *;
+        `;
+      } else {
+        // Update existing ride
+        result = await sql`
+          UPDATE rides
+          SET ${sql.unsafe(safeColumn)} = ${value}
+          WHERE ride_id = ${ride_id}
+          RETURNING *;
+        `;
+      }
+      res.json({ data: result[0] });
+    }catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
 
 export default router;
