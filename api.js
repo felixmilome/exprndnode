@@ -11,6 +11,7 @@ const router = Router();
 const userRoute = "/user"
 const driverRoute = "/driver"
 const rideRoute = "/ride"
+const ratingRoute = "/rating"
 
 router.get(userRoute, async (req, res) => {
   try {
@@ -100,18 +101,20 @@ router.patch(userRoute, async (req, res) => {
 
 router.get(driverRoute, async (req, res) => {
     try {
-    //   const drivers = await sql`
-    //     SELECT *
-    //     FROM users
-    //     WHERE account_type = 'driver'
-    //       AND verified = true;
-    //   `;
+      // const drivers = await sql`
+      //   SELECT *
+      //   FROM users
+      //   WHERE account_type = 'driver'
+      //     AND verified = true;
+      // `;
+      
   
-    //   if (!drivers[0]) {
-    //     return res.status(404).json({ error: "No verified drivers found" });
-    //   }
+      // if (!drivers[0]) {
+      //   return res.status(404).json({ error: "No verified drivers found" });
+      // }
 
-    const drivers = mockdrivers;
+     const drivers = mockdrivers;
+    console.log(drivers);
   
       res.json({ data: drivers });
     } catch (error) {
@@ -132,8 +135,8 @@ router.get(driverRoute, async (req, res) => {
     }
   
     try {
-      const rides = await sql `SELECT * from rides WHERE rides.user_id = ${userId} 
-      ORDER BY rides.created_at DESC;`
+      // const rides = await sql `SELECT * from rides WHERE rides.user_id = ${userId} 
+      // ORDER BY rides.created_at DESC;`
       // const rides = await sql`
       //   SELECT
       //       rides.ride_id,
@@ -166,7 +169,7 @@ router.get(driverRoute, async (req, res) => {
       //   return res.status(404).json({ error: "No rides found for this user" });
       // }
 
-      // const rides = mockrides
+       const rides = mockrides
   
       res.json({ data: rides });
     } catch (error) {
@@ -234,6 +237,62 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
+
+  router.patch(ratingRoute, async (req, res) => {
+    try {
+      const { ride_id, rating, comment, type } = req.body;
+  
+      if (!ride_id || !type) {
+        return res.status(400).json({
+          error: "ride_id and type are required (driver | client)",
+        });
+      }
+  
+      // map allowed fields
+      const updates = {};
+  
+      if (rating !== undefined) {
+        updates[type === "driver" ? "driver_rated" : "client_rated"] = rating;
+      }
+  
+      if (comment !== undefined) {
+        updates[type === "driver" ? "driver_commented" : "user_commented"] =
+          comment;
+      }
+  
+      // nothing to update
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+  
+      // check ride exists
+      const ride = await sql`
+        SELECT ride_id FROM rides WHERE ride_id = ${ride_id};
+      `;
+  
+      if (!ride[0]) {
+        return res.status(404).json({ error: "Ride not found" });
+      }
+  
+      // build dynamic SET clause safely
+      const setClauses = Object.entries(updates).map(
+        ([key, value]) => sql`${sql.unsafe(key)} = ${value}`
+      );
+  
+      const result = await sql`
+        UPDATE rides
+        SET ${sql.join(setClauses, sql`, `)}
+        WHERE ride_id = ${ride_id}
+        RETURNING *;
+      `;
+  
+      res.json({ data: result[0] });
+    } catch (error) {
+      console.error("Error updating ride rating:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+  
 
 
 export default router;

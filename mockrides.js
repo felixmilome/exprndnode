@@ -1,98 +1,99 @@
-export default [
+export default[
     {
-        "ride_id": "1",
-        "origin_address": "Kathmandu, Nepal",
-        "destination_address": "Pokhara, Nepal",
-        "origin_latitude": "27.717245",
-        "origin_longitude": "85.323961",
-        "destination_latitude": "28.209583",
-        "destination_longitude": "83.985567",
-        "ride_time": 391,
-        "fare_price": "19500.00",
-        "payment_status": "paid",
-        "driver_id": 2,
-        "user_id": "1",
-        "created_at": "2024-08-12 05:19:20.620007",
-        "driver": {
-            "driver_id": "2",
-            "first_name": "David",
-            "last_name": "Brown",
-            "profile_image_url": "https://ucarecdn.com/6ea6d83d-ef1a-483f-9106-837a3a5b3f67/-/preview/1000x666/",
-            "car_image_url": "https://ucarecdn.com/a3872f80-c094-409c-82f8-c9ff38429327/-/preview/930x932/",
-            "car_seats": 5,
-            "rating": "4.60"
-        }
+      "id": "1",
+      "origin_address": "Westlands, Nairobi",
+      "destination_address": "CBD, Nairobi",
+      "origin_latitude": -1.2685,
+      "origin_longitude": 36.8110,
+      "destination_latitude": -1.2864,
+      "destination_longitude": 36.8172,
+      "ride_state": "completed",
+      "ride_time": 18,
+      "fare_price": 450.50,
+      "driver_id": "8f2d1b41-3b8d-4b2f-b6e7-0d1f63a2a9e1",
+      "user_id": "1c4f8d59-6f77-44e4-b8c9-9caa8d1c12f4",
+      "created_at": "2026-01-28T09:15:23.000Z",
+      "package_weight": 3,
+      "package_description": "Small electronics package",
+      "driver_rated": 4.8,
+      "user_rated": 5.0,
+      "driver_commented": "Polite customer",
+      "user_commented": "Smooth ride, fast delivery",
+      "user_data": {
+        "name": "Kevin Otieno",
+        "phone": "+254712345678",
+        "profile_image_slug": "users/kevin_otieno.jpg"
+      },
+      "driver_data": {
+        "name": "Brian Mwangi",
+        "vehicle_type": 1,
+        "phone": "+254701223344",
+        "profile_image_slug": "drivers/brian_mwangi.jpg"
+      }
     },
     {
-        "ride_id": "2",
-        "origin_address": "Jalkot, MH",
-        "destination_address": "Pune, Maharashtra, India",
-        "origin_latitude": "18.609116",
-        "origin_longitude": "77.165873",
-        "destination_latitude": "18.520430",
-        "destination_longitude": "73.856744",
-        "ride_time": 491,
-        "fare_price": "24500.00",
-        "payment_status": "paid",
-        "driver_id": 1,
-        "user_id": "1",
-        "created_at": "2024-08-12 06:12:17.683046",
-        "driver": {
-            "driver_id": "1",
-            "first_name": "James",
-            "last_name": "Wilson",
-            "profile_image_url": "https://ucarecdn.com/dae59f69-2c1f-48c3-a883-017bcf0f9950/-/preview/1000x666/",
-            "car_image_url": "https://ucarecdn.com/a2dc52b2-8bf7-4e49-9a36-3ffb5229ed02/-/preview/465x466/",
-            "car_seats": 6,
-            "rating": "4.80"
-        }
+      "id": "2",
+      "origin_address": "Kasarani, Nairobi",
+      "destination_address": "Thika Road Mall",
+      "origin_latitude": -1.2186,
+      "origin_longitude": 36.8894,
+      "destination_latitude": -1.2191,
+      "destination_longitude": 36.8880,
+      "ride_state": "on_route",
+      "ride_time": 12,
+      "fare_price": 320.00,
+      "driver_id": "4a6c9c2e-91c6-4c9c-a62a-57c41e3db921",
+      "user_id": "d2e1c4b8-2a4d-4c0f-bc6e-8a0baf3e9981",
+      "created_at": "2026-01-29T06:42:10.000Z",
+      "package_weight": 1,
+      "package_description": "Food delivery",
+      "driver_rated": null,
+      "user_rated": null,
+      "driver_commented": null,
+      "user_commented": null,
+      "user_data": {
+        "name": "Aisha Noor",
+        "phone": "+254798556677",
+        "profile_image_slug": "users/aisha_noor.png"
+      },
+      "driver_data": {
+        "name": "Joseph Kamau",
+        "vehicle_type": 2,
+        "phone": "+254733889900",
+        "profile_image_slug": "drivers/joseph_kamau.png"
+      }
     },
     {
-        "ride_id": "3",
-        "origin_address": "Zagreb, Croatia",
-        "destination_address": "Rijeka, Croatia",
-        "origin_latitude": "45.815011",
-        "origin_longitude": "15.981919",
-        "destination_latitude": "45.327063",
-        "destination_longitude": "14.442176",
-        "ride_time": 124,
-        "fare_price": "6200.00",
-        "payment_status": "paid",
-        "driver_id": 1,
-        "user_id": "1",
-        "created_at": "2024-08-12 08:49:01.809053",
-        "driver": {
-            "driver_id": "1",
-            "first_name": "James",
-            "last_name": "Wilson",
-            "profile_image_url": "https://ucarecdn.com/dae59f69-2c1f-48c3-a883-017bcf0f9950/-/preview/1000x666/",
-            "car_image_url": "https://ucarecdn.com/a2dc52b2-8bf7-4e49-9a36-3ffb5229ed02/-/preview/465x466/",
-            "car_seats": 0,
-            "rating": "4.80"
-        }
-    },
-    {
-        "ride_id": "4",
-        "origin_address": "Okayama, Japan",
-        "destination_address": "Osaka, Japan",
-        "origin_latitude": "34.655531",
-        "origin_longitude": "133.919795",
-        "destination_latitude": "34.693725",
-        "destination_longitude": "135.502254",
-        "ride_time": 159,
-        "fare_price": "7900.00",
-        "payment_status": "paid",
-        "driver_id": 3,
-        "user_id": "1",
-        "created_at": "2024-08-12 18:43:54.297838",
-        "driver": {
-            "driver_id": "3",
-            "first_name": "Michael",
-            "last_name": "Johnson",
-            "profile_image_url": "https://ucarecdn.com/0330d85c-232e-4c30-bd04-e5e4d0e3d688/-/preview/826x822/",
-            "car_image_url": "https://ucarecdn.com/289764fb-55b6-4427-b1d1-f655987b4a14/-/preview/930x932/",
-            "car_seats": 7,
-            "rating": "4.70"
-        }
+      "id": "3",
+      "origin_address": "Langata, Nairobi",
+      "destination_address": "Karen Shopping Centre",
+      "origin_latitude": -1.3470,
+      "origin_longitude": 36.7425,
+      "destination_latitude": -1.3192,
+      "destination_longitude": 36.7073,
+      "ride_state": "requested",
+      "ride_time": 0,
+      "fare_price": 0.00,
+      "driver_id": "b9c7e2f4-2f61-4eaa-9c64-2f5d91b5a112",
+      "user_id": "a3f0e8b7-5c44-4f9c-b7a2-d33d91c0ff21",
+      "created_at": "2026-01-29T08:05:55.000Z",
+      "package_weight": 5,
+      "package_description": "Clothes delivery",
+      "driver_rated": null,
+      "user_rated": null,
+      "driver_commented": "no comment",
+      "user_commented": "no comment",
+      "user_data": {
+        "name": "Daniel Mutua",
+        "phone": "+254711009988",
+        "profile_image_slug": "users/daniel_mutua.jpg"
+      },
+      "driver_data": {
+        "name": "Samuel Kiptoo",
+        "vehicle_type": 3,
+        "phone": "+254722334455",
+        "profile_image_slug": "drivers/samuel_kiptoo.jpg"
+      }
     }
-]
+  ]
+  
