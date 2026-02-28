@@ -3,35 +3,366 @@ import { neon } from "@neondatabase/serverless";
 import dotenv from "dotenv";
 import mockrides from "./mockrides.js";
 import mockdrivers from "./mockdrivers.js";
+import { isSafeIdentifier } from "./functions.js";
 
 dotenv.config(); // load .env variables
 
-const sql = neon(process.env.DATABASE_URL);
+
+
+const sql = neon(process.env.AHC_DATABASE_URL);
 const router = Router();
+const authRoute = "/auth"
 const userRoute = "/user"
 const driverRoute = "/driver"
 const rideRoute = "/ride"
-const ratingRoute = "/rating"
+const ratingRoute = "/rating" 
+
+// login
+
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+// const OTP_SECRET = process.env.OTP_SECRET;
+
+router.post(authRoute + "/signup", async (req, res) => {
+  try {
+    const { email, password, account_type, hospital_name, name, hospital_code } = req.body;
+    console.log(req.body);  
+ 
+    //1. Validate body
+    if (!email?.length>0 || !password?.length>0 || !name?.length>0 || account_type === undefined) {
+      return res.status(201).json({ success:false, message: "email, password and account_type are required" });
+    }
+ 
+    if (account_type === 2 && !hospital_name?.length>0) {
+      return res.status(201).json({ success:false, message: "Hospital name is required" });
+    }
+
+    // // 2. Check if email exists
+    const existingUser = await sql`
+      SELECT id FROM users WHERE email = ${email};
+    `;
+
+    // 3. If exists return error
+    if (existingUser.length > 0) {
+      return res.status(201).json({
+        message: `Account ${email} already exists`,
+        success:false,
+        statuscode: 409
+      });
+    }
+
+    // 4. Hash password
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // 5. Create 5 character hexadecimal OTP
+   const otp = crypto.randomBytes(3).toString("hex").slice(0, 5).toUpperCase(); // e.g. "A3F9C"
+
+    // 6. Sign OTP JWT (for verification later)
+    const otp_token = jwt.sign({ email }, otp, { expiresIn: "10m" });
+
+    // 7. Store user in users table
+    const insertedUser = await sql`
+      INSERT INTO users (email, name, password_hash, account_type, otp_token)
+      VALUES (${email}, ${name}, ${password_hash}, ${account_type}, ${otp_token})
+      RETURNING id, email;
+    `;
+
+    const user = insertedUser[0];
+
+    // 8 & 9 & 10. Create related records based on account_type
+    if (account_type === 2) {
+      // Hospital account
+      await sql`
+        INSERT INTO hospitals (user_id, name)
+        VALUES (${user.id}, ${hospital_name});
+      `;
+    } else if (account_type === 1) {
+      // Sample collector account
+        if (hospital_code?.length > 0) {
+          const hosId = parseInt(hospital_code, 10)
+          await sql`
+              INSERT INTO ambulances (user_id, hospital_id)
+              VALUES (${user.id}, ${hosId});
+            `;
+          } else {
+            await sql`
+              INSERT INTO ambulances (user_id)
+              VALUES (${user.id});
+            `;
+          }
+    }
+    // account_type 0 => do nothing
+  
+    // 11. Send Email OTP (placeholder)
+    // TODO: integrate nodemailer / resend / sendgrid
+    console.log(`OTP for ${email}: ${otp}`);
+
+    // 12. Create session token (NOT stored in DB) NOT USED UNTIL VERIFY
+    // const session_token = jwt.sign(
+    //   { user_id: user.id, email: user.email, account_type },
+    //   JWT_SECRET,
+    //   // { expiresIn: "7d" }
+    // );
+
+    // 13. Return response
+    return res.status(201).json({
+      success:true, 
+      email: user.email,
+      //session_token,
+      statuscode: 201
+    });
+
+  } catch (error) {
+    console.error("Signup error:", error);
+    return res.status(201).json({
+      error: "Internal Server Error",
+      success:false,
+      message:"Internal Server Error"
+    });
+  }
+});
+
+router.post(authRoute + "/verify-signup", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // 1. Validate input
+    if (!email?.length>0 || !otp?.length>0) {
+      return res.status(201).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    // 2. Fetch user by email
+    const users = await sql`
+      SELECT id, email, account_type, otp_token FROM users WHERE email = ${email};
+    `;
+
+    if (users.length === 0) {
+      return res.status(201).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const user = users[0];
+
+    // 3. Verify OTP JWT
+    try {
+      // jwt.verify throws if invalid or expired
+      jwt.verify(user.otp_token, otp); // OTP is used as the secret
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(201).json({
+          success: false,
+          message: "OTP expired",
+        });
+      } else if (err.name === "JsonWebTokenError") {
+        return res.status(201).json({
+          success: false,
+          message: "Invalid OTP",
+        });
+      } else {
+        return res.status(201).json({
+          success: false,
+          message: "OTP verification failed",
+        });
+      }
+    }
+
+    // 4. Create session JWT
+    const session_token = jwt.sign(
+      { user_id: user.id, email: user.email, account_type: user.account_type },
+      JWT_SECRET
+    );
+
+    // 5. Optionally, you can delete or invalidate OTP token from DB here
+    await sql`
+      UPDATE users SET otp_token = NULL WHERE id = ${user.id};
+    `;
+
+    // 6. Return success
+    return res.status(201).json({
+      success: true,
+      message: "OTP verified successfully",
+      session_token,
+      email:user?.email
+    });
+  } catch (error) {
+    console.error("OTP verify error:", error);
+    return res.status(201).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
+
+router.post(authRoute + "/login", async (req, res) => { 
+  try {
+    const { email, password } = req.body;
+    console.log(req.body)
+
+    // 1. Validate input
+    if (!email?.length || !password?.length) {
+      return res.status(201).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    // 2. Fetch user by email
+    const users = await sql`
+      SELECT id, email, password_hash, account_type FROM users WHERE email = ${email};
+    `;
+    console.log({users})
+
+    if (users.length === 0) {
+      return res.status(201).json({
+        success: false,
+        message: "Wrong Credentials",
+      });
+    }
+
+    const user = users[0];
+
+    // 3. Check password
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(201).json({
+        success: false,
+        message: "Invalid Credentials",
+      });
+    }
+
+    // 4. Create session JWT
+    const session_token = jwt.sign(
+      { user_id: user.id, email: user.email, account_type: user.account_type },
+      JWT_SECRET
+    );
+ 
+
+    // 5. Return success
+    return res.status(201).json({
+      success: true,
+      message: "Login successful",
+      email: user.email,
+      session_token,
+      statuscode: 201,
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(201).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
+ 
 
 router.get(userRoute, async (req, res) => {
   try {
     const email = req.query.email;
-    if (!email) return res.status(400).json({ error: "Email query parameter is required" });
 
-    const user = await sql`
-      SELECT * FROM users WHERE email = ${email};
+    if (!email || !email.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Email query parameter is required",
+      });
+    }
+
+    // 1️⃣ Fetch user (only safe fields)
+    const users = await sql`
+      SELECT 
+        id,
+        email,
+        phone,
+        created_at,
+        image_slug,
+        conduct_image_slug,
+        id_image_slug,
+        account_type,
+        name,
+        rating
+      FROM users
+      WHERE email = ${email};
     `;
 
-    if (!user[0]) return res.status(404).json({ error: "User not found" });
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-    res.json({ data: user[0] });
+    const user = users[0];
+
+    // 2️⃣ account_type 0 → just user
+    if (user.account_type === 0) {
+      return res.json({
+        success: true,
+        data: { user },
+      });
+    }
+
+    // 3️⃣ account_type 1 → ambulance
+ if (user.account_type === 1) {
+  const ambulances = await sql`
+    SELECT * FROM ambulances
+    WHERE user_id = ${user.id};
+  `;
+
+  const ambulance = ambulances[0] || null;
+
+  let hospital = null;
+
+      if (ambulance?.hospital_id) {
+        const hospitals = await sql`
+          SELECT * FROM hospitals
+          WHERE id = ${ambulance.hospital_id};
+        `;
+        hospital = hospitals[0] || null;
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          user,
+          ambulance,
+          hospital,
+        },
+      });
+    }
+
+    // 4️⃣ account_type 2 → hospital
+    if (user.account_type === 2) {
+      const hospitals = await sql`
+        SELECT *
+        FROM hospitals
+        WHERE user_id = ${user.id};
+      `;
+
+      return res.json({
+        success: true,
+        data: {
+          user,
+          hospital: hospitals[0] || null,
+        },
+      });
+    }
+
   } catch (error) {
     console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 });
-
-
 router.post(userRoute, async (req, res) => {
   try {
     const { name, email, clerkId } = req.body;
@@ -53,44 +384,56 @@ router.post(userRoute, async (req, res) => {
   }
 });
 
-
 router.patch(userRoute, async (req, res) => {
   try {
-    const { user_id, key, value } = req.body;
+    const { id, key, value, type } = req.body;
 
-    if (!user_id || !key) {
-      return res.status(400).json({ error: "user_id and key are required" });
+    if (!id || !key || type === undefined) {
+      return res.status(400).json({ error: "id, key and type are required" });
     }
 
-    // Ensure column name is safe
-    const safeColumn = key; // In production, validate this against allowed columns
+    // Map type to table
+    let tableName;
+    switch (Number(type)) {
+      case 0: tableName = "users"; break;
+      case 1: tableName = "ambulances"; break;
+      case 2: tableName = "hospitals"; break;
+      default: return res.status(400).json({ error: "Invalid type" });
+    }
 
-    // Check if user exists
-    const existingUser = await sql`
-      SELECT * FROM users WHERE user_id = ${user_id};
+    // Sanitize column/table names
+    if (!isSafeIdentifier(tableName) || !isSafeIdentifier(key)) {
+      return res.status(400).json({ error: "Invalid table or column name" });
+    }
+
+    // Check if record exists
+    const existing = await sql`
+      SELECT * FROM ${sql.unsafe(tableName)}
+      WHERE id = ${id};
     `;
 
     let result;
-    if (!existingUser[0]) {
+    if (!existing[0]) {
       // Insert if not exists
       result = await sql`
-        INSERT INTO users (user_id, ${sql.unsafe(safeColumn)})
-        VALUES (${user_id}, ${value})
+        INSERT INTO ${sql.unsafe(tableName)} (id, ${sql.unsafe(key)})
+        VALUES (${id}, ${value})
         RETURNING *;
       `;
     } else {
-      // Update existing user
+      // Update existing
       result = await sql`
-        UPDATE users
-        SET ${sql.unsafe(safeColumn)} = ${value}
-        WHERE user_id = ${user_id}
+        UPDATE ${sql.unsafe(tableName)}
+        SET ${sql.unsafe(key)} = ${value}
+        WHERE id = ${id}
         RETURNING *;
       `;
     }
 
     res.json({ data: result[0] });
+
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error("Error updating record:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -114,7 +457,7 @@ router.get(driverRoute, async (req, res) => {
       // }
 
      const drivers = mockdrivers;
-    console.log(drivers);
+  //  console.log(drivers);
   
       res.json({ data: drivers });
     } catch (error) {
