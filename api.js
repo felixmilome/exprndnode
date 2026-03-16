@@ -16,6 +16,7 @@ const userRoute = "/user"
 const driverRoute = "/driver"
 const rideRoute = "/ride"
 const ratingRoute = "/rating" 
+const locationRoute = "/location" 
 
 // login
 
@@ -444,20 +445,53 @@ router.patch(userRoute, async (req, res) => {
 
 router.get(driverRoute, async (req, res) => {
     try {
-      // const drivers = await sql`
-      //   SELECT *
-      //   FROM users
-      //   WHERE account_type = 'driver'
-      //     AND verified = true;
-      // `;
+      const drivers = await sql`
+            SELECT 
+              u.id,
+              u.email,
+              u.phone,
+              u.image_slug,
+              u.account_type,
+              u.name,
+              u.id_image_slug,
+              u.conduct_image_slug,
+              u.rating,
+              u.created_at,
+              u.current_latitude,
+              u.current_longitude,
+              u.current_address,
+
+              json_build_object(
+                'id', a.id,
+                'profession', a.profession,
+                'vehicle_type', a.vehicle_type,
+                'user_id', a.user_id,
+                'number_plate', a.number_plate,
+                'colour', a.colour,
+                'model', a.model,
+                'description', a.description,
+                'current_latitude', u.current_latitude,
+                'current_longitude', u.current_longitude,
+                'status', a.status,
+                'hospital_id', a.hospital_id,
+                'verified', a.verified,
+                'id_image_slug', a.id_image_slug,
+                'rating', a.rating,
+                'created_at', a.created_at
+              ) AS ambulance_data
+
+            FROM users u
+            JOIN ambulances a ON u.id = a.user_id;
+            `;
       
   
-      // if (!drivers[0]) {
-      //   return res.status(404).json({ error: "No verified drivers found" });
-      // }
-
-     const drivers = mockdrivers;
-  //  console.log(drivers);
+      if (!drivers[0]) {
+        return res.status(404).json({ error: "No verified drivers found" });
+      }
+ 
+     //const drivers = mockdrivers;
+    // console.log('dere'); 
+    console.log({drivers});
   
       res.json({ data: drivers });
     } catch (error) {
@@ -635,7 +669,36 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   });
-  
 
+// Location ======================================
+  
+ router.post(locationRoute + "/update", async (req, res) => {
+  try {
+    const { user_id, deviceLocation } = req.body;
+    //console.log({user_id, deviceLocation})
+
+    if (!user_id || !deviceLocation) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const { latitude, longitude, address } = deviceLocation;
+
+    const response = await sql`
+      UPDATE users
+      SET 
+        current_latitude = ${latitude},
+        current_longitude = ${longitude},
+        current_address = ${address}
+      WHERE id = ${user_id}
+      RETURNING *;
+    `;
+
+    res.status(200).json({ data: response[0] });
+
+  } catch (error) {
+    console.error("Error updating user location:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 export default router;

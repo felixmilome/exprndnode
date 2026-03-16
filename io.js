@@ -5,11 +5,11 @@ export default function setupSocket(io) {
   // In-memory storage for connected users
   // Each user: { email, socketId }
 
-
+ 
   let users = [];
   const userLocations = new Map();
 
-  console.log(users);
+  //console.log(users);
 
   io.on("connection", (socket) => {
 
@@ -24,14 +24,14 @@ export default function setupSocket(io) {
       if (!email) return;
 
       const existing = users.find((u) => u?.email === email || u.user_id === user_id);
-      console.log({existing});
+    //  console.log({existing});
       if (!existing) {
         users.push({ email, socketId: socket.id, user_id: user_id });
       } else {
         existing.socketId = socket.id; // update socket if reconnecting
       }
 
-      console.log("Registered users:", users);
+     // console.log("Registered users:", users);
     }catch(error){
         console.log(error)
       }
@@ -67,7 +67,7 @@ export default function setupSocket(io) {
       try{
       const { user_id, lat, lng, timestamp } = data;
       userLocations.set(user_id, { lat, lng, timestamp });
-      console.log({userLocations})
+     // console.log({userLocations})
       // Optionally: broadcast to nearby users
       // io.emit("user:location:broadcast", { user_id, lat, lng });
       }catch(error){
@@ -155,7 +155,7 @@ export default function setupSocket(io) {
       try{
      
       const user = users.find((u) => u?.email === ride?.user?.email || u.user_id === ride?.user_id);
-      console.log({user});
+     // console.log({user});
       
       if (user) {
         console.log('sending ride req to', user)
@@ -189,5 +189,5 @@ export default function setupSocket(io) {
   
   });
 
-  console.log({userLocations})
+ // console.log({userLocations})
 }
