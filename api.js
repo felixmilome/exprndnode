@@ -461,28 +461,32 @@ router.get(driverRoute, async (req, res) => {
               u.current_longitude,
               u.current_address,
 
-              json_build_object(
-                'id', a.id,
-                'profession', a.profession,
-                'vehicle_type', a.vehicle_type,
-                'user_id', a.user_id,
-                'number_plate', a.number_plate,
-                'colour', a.colour,
-                'model', a.model,
-                'description', a.description,
-                'current_latitude', u.current_latitude,
-                'current_longitude', u.current_longitude,
-                'status', a.status,
-                'hospital_id', a.hospital_id,
-                'verified', a.verified,
-                'id_image_slug', a.id_image_slug,
-                'rating', a.rating,
-                'created_at', a.created_at
+              jsonb_strip_nulls(
+                jsonb_build_object(
+                  'id', a.id,
+                  'profession', a.profession,
+                  'vehicle_type', a.vehicle_type,
+                  'user_id', a.user_id,
+                  'number_plate', a.number_plate,
+                  'colour', a.colour,
+                  'model', a.model,
+                  'description', a.description,
+                  'current_latitude', u.current_latitude,
+                  'current_longitude', u.current_longitude,
+                  'status', a.status,
+                  'hospital_id', a.hospital_id,
+                  'hospital_name', h.name,   -- will be null if hospital not found
+                  'verified', a.verified,
+                  'id_image_slug', a.id_image_slug,
+                  'rating', a.rating,
+                  'created_at', a.created_at
+                )
               ) AS ambulance_data
 
             FROM users u
-            JOIN ambulances a ON u.id = a.user_id;
-            `;
+            JOIN ambulances a ON u.id = a.user_id
+            LEFT JOIN hospitals h ON a.hospital_id = h.id;
+          `;
       
   
       if (!drivers[0]) {
