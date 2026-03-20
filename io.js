@@ -85,12 +85,43 @@ export default function setupSocket(io) {
       }
     });  
 
+
+        // request ride
+    socket.on("request:ride", (ride) => {
+      console.log('io request:ride');
+      try{
+
+       // console.log({ride}) 
+        // console.log({users})
+     
+      const user = users.find(
+        (u) => (u?.email === ride?.driver_data?.email)
+      || (u.user_id === ride.driver_data?.id)
+    );
+
+      // console.log({user}); 
+      
+      if (user) {
+        console.log('sending ride req to', user)
+        io.to(user.socketId).emit("ride:requested", ride);
+      }
+      }catch(error){
+        console.log(error); 
+      }
+      
+    }); 
+ 
     // accept ride
     socket.on("accept:ride", (ride) => {
       try{
 
-      const user = users.find((u) => u?.email === email || u.user_id === ride?.user_id);
+      const user = users.find(
+          (u) => (u?.email === ride?.client_data?.email)
+        || (u.user_id === ride.client_data?.id)
+      );
+ 
       if (user) {
+          console.log('sending accept to', user)
         io.to(user.socketId).emit("ride:accepted", ride);
       }
     }catch(error){
@@ -149,23 +180,7 @@ export default function setupSocket(io) {
     }
     }); 
 
-    // accept ride
-    socket.on("request:ride", (ride) => {
-      console.log(ride);
-      try{
-     
-      const user = users.find((u) => u?.email === ride?.user?.email || u.user_id === ride?.user_id);
-     // console.log({user});
-      
-      if (user) {
-        console.log('sending ride req to', user)
-        io.to(user.socketId).emit("ride:requested", ride);
-      }
-      }catch(error){
-        console.log(error);
-      }
-      
-    });
+
 
     
   
@@ -185,7 +200,7 @@ export default function setupSocket(io) {
       console.log(error)
     }
 
-   
+  
   
   });
 

@@ -495,7 +495,7 @@ router.get(driverRoute, async (req, res) => {
  
      //const drivers = mockdrivers;
     // console.log('dere'); 
-    console.log({drivers});
+   // console.log({drivers});
   
       res.json({ data: drivers });
     } catch (error) {
@@ -504,7 +504,7 @@ router.get(driverRoute, async (req, res) => {
     }
   });
 
-
+ 
 
   // RIDES ===================================================================
 
@@ -519,7 +519,7 @@ router.get(driverRoute, async (req, res) => {
       // const rides = await sql `SELECT * from rides WHERE rides.user_id = ${userId} 
       // ORDER BY rides.created_at DESC;`
       // const rides = await sql`
-      //   SELECT
+      //   SELECT 
       //       rides.ride_id,
       //       rides.origin_address,
       //       rides.destination_address,
@@ -559,25 +559,41 @@ router.get(driverRoute, async (req, res) => {
     }
   }); 
 
-  router.post(rideRoute, async (req, res) => {
-    try {
-      const ride = req?.body;
-  
-      if (!ride) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-  
-      const response = await sql`
-      INSERT INTO rides ${sql(ride)}
+router.post(rideRoute, async (req, res) => {
+  try {
+    const ride = req.body;
+
+    if (!ride) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Prepare DB object by removing frontend-only nested fields and id
+    const dbRide = (({ client_data, driver_data, id, ...rest }) => rest)(ride);
+
+    // Dynamically get columns and values
+    const keys = Object.keys(dbRide);
+    const values = Object.values(dbRide);
+
+    // Create placeholders for parameterized query ($1, $2, ...)
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+
+    // Build the SQL query
+    const query = `
+      INSERT INTO rides (${keys.join(", ")})
+      VALUES (${placeholders})
       RETURNING *;
     `;
-  
-      res.status(201).json({ data: response[0] });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  });
+
+    // Execute the query safely
+    const response = await sql.query(query, values);
+
+    // Return the first inserted row
+    return res.status(201).json({ data: response[0] });
+  } catch (error) {
+    console.error("Error creating ride:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
   router.patch(rideRoute, async (req, res) => {
     try {

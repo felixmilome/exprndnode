@@ -5,6 +5,7 @@ import cors from "cors";
 
 import apiRoutes from "./api.js";
 import setupSocket from "./io.js";
+import os from "os";
 
 const app = express();
 const server = http.createServer(app);
@@ -25,6 +26,28 @@ setupSocket(io);
 
 // Start server
 const PORT = 3000;
-server.listen(PORT, () => {
-  console.log(`🚗 Uber server running on http://localhost:${PORT}`);
+ 
+//local
+// index.js (ES Module)
+
+server.listen(PORT, "0.0.0.0", () => {
+  const ifaces = os.networkInterfaces();
+
+  console.log("🚗 Server listening on:");
+
+  // Loop through all network interfaces
+  for (const ifaceList of Object.values(ifaces)) {
+    ifaceList?.forEach((iface) => {
+      // Only IPv4 and non-internal addresses
+      if (iface.family === "IPv4" && !iface.internal) {
+        console.log(`http://${iface.address}:${PORT}`);
+      }
+    });
+  }
 });
+
+//live
+// server.listen(PORT, () => {
+//   console.log(`🚗 Uber server running on http://localhost:${PORT}`);
+// });
+
