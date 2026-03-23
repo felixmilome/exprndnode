@@ -15,7 +15,7 @@ const authRoute = "/auth"
 const userRoute = "/user"
 const driverRoute = "/driver"
 const rideRoute = "/ride"
-const ratingRoute = "/rating" 
+const reviewsRoute = "/reviews" 
 const locationRoute = "/location" 
 
 // login
@@ -558,6 +558,7 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   }); 
+  
 
 router.post(rideRoute, async (req, res) => {
   try {
@@ -635,60 +636,41 @@ router.post(rideRoute, async (req, res) => {
     }
   });
 
-  router.patch(ratingRoute, async (req, res) => {
-    try {
-      const { ride_id, rating, comment, type } = req.body;
-  
-      if (!ride_id || !type) {
-        return res.status(400).json({
-          error: "ride_id and type are required (driver | client)",
-        });
+
+  //REVIEWS ++++++++++++++++++++++++
+
+router.post(reviewsRoute, async (req, res) => {
+  try {
+    const review = req.body;
+
+    const requiredFields = ["ride_id", "rating", "comment", "rater_id", "rated_id"];
+    for (const field of requiredFields) {
+      if (!review[field]) {
+        return res.status(400).json({ error: `${field} is required` });
       }
-  
-      // map allowed fields
-      const updates = {};
-  
-      if (rating !== undefined) {
-        updates[type === "driver" ? "driver_rated" : "client_rated"] = rating;
-      }
-  
-      if (comment !== undefined) {
-        updates[type === "driver" ? "driver_commented" : "user_commented"] =
-          comment;
-      }
-  
-      // nothing to update
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: "No valid fields to update" });
-      }
-  
-      // check ride exists
-      const ride = await sql`
-        SELECT ride_id FROM rides WHERE ride_id = ${ride_id};
-      `;
-  
-      if (!ride[0]) {
-        return res.status(404).json({ error: "Ride not found" });
-      }
-  
-      // build dynamic SET clause safely
-      const setClauses = Object.entries(updates).map(
-        ([key, value]) => sql`${sql.unsafe(key)} = ${value}`
-      );
-  
-      const result = await sql`
-        UPDATE rides
-        SET ${sql.join(setClauses, sql`, `)}
-        WHERE ride_id = ${ride_id}
-        RETURNING *;
-      `;
-  
-      res.json({ data: result[0] });
-    } catch (error) {
-      console.error("Error updating ride rating:", error);
-      res.status(500).json({ error: "Internal Server Error" });
     }
-  });
+
+    // Dynamically remove any frontend-only fields if needed
+    const dbReview = (({ id, ...rest }) => rest)(review);
+
+    const keys = Object.keys(dbReview);
+    const values = Object.values(dbReview);
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+
+    const query = `
+      INSERT INTO reviews (${keys.join(", ")})
+      VALUES (${placeholders})
+      RETURNING *;
+    `;
+
+    const response = await sql.query(query, values);
+
+    return res.status(201).json({ data: response[0] });
+  } catch (error) {
+    console.error("Error inserting review:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 // Location ======================================
   

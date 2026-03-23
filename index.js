@@ -28,7 +28,6 @@ setupSocket(io);
 const PORT = 3000;
  
 //local
-// index.js (ES Module)
 
 server.listen(PORT, "0.0.0.0", () => {
   const ifaces = os.networkInterfaces();
