@@ -8,7 +8,6 @@ import { isSafeIdentifier } from "./functions.js";
 dotenv.config(); // load .env variables
 
 
-
 const sql = neon(process.env.AHC_DATABASE_URL);
 const router = Router();
 const authRoute = "/auth"
@@ -559,7 +558,6 @@ router.get(driverRoute, async (req, res) => {
     }
   }); 
   
-
 router.post(rideRoute, async (req, res) => {
   try {
     const ride = req.body;
@@ -571,27 +569,29 @@ router.post(rideRoute, async (req, res) => {
     // Prepare DB object by removing frontend-only nested fields and id
     const dbRide = (({ client_data, driver_data, id, ...rest }) => rest)(ride);
 
-    // Dynamically get columns and values
     const keys = Object.keys(dbRide);
     const values = Object.values(dbRide);
 
-    // Create placeholders for parameterized query ($1, $2, ...)
+    // Create placeholders $1, $2, ...
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
 
-    // Build the SQL query
+    // Build update string fodr conflict (exclude primary key if needed)
+    const updates = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
+
+    // Assuming 'id' is your unique identifier
     const query = `
       INSERT INTO rides (${keys.join(", ")})
       VALUES (${placeholders})
+      ON CONFLICT (id) DO UPDATE
+      SET ${updates}
       RETURNING *;
     `;
 
-    // Execute the query safely
     const response = await sql.query(query, values);
 
-    // Return the first inserted row
     return res.status(201).json({ data: response[0] });
   } catch (error) {
-    console.error("Error creating ride:", error);
+    console.error("Error creating/updating ride:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });

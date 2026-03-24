@@ -129,18 +129,7 @@ export default function setupSocket(io) {
     }
     }); 
 
-    socket.on("reject:ride", (user_id) => {
-
-      try{
-
-      const user = users.find((u) =>  u.user_id === user_id);
-      if (user) {
-        io.to(user.socketId).emit("ride:rejected", ride);
-      }
-    }catch(error){
-      console.log(error)
-    }
-    }); 
+  
 
   socket.on("rider:waiting", (user_id) => {
     //console.log("rider:waiting");
@@ -180,6 +169,20 @@ export default function setupSocket(io) {
       }
     }catch(error){
       console.log(error);
+    }
+    }); 
+
+    socket.on("cancel:ride", (user_id) => {
+
+      try{
+
+      const user = users.find((u) =>  u.user_id === user_id);
+      if (user) {
+        io.to(user.socketId).emit("ride:cancelled", user);
+             console.log('sending ride cancel ', user)
+      }
+    }catch(error){
+      console.log(error)
     }
     }); 
 
