@@ -186,6 +186,29 @@ export default function setupSocket(io) {
     }
     }); 
 
+        // location update
+    socket.on("location:update", (loc) => { 
+      try{
+        console.log({loc})
+        console.log({users})
+ 
+      const user = users.find(u => u.user_id === loc?.recepient_id);
+
+      const sentLoc = {
+        latitude: loc?.latitude,
+        longitude: loc?.longitude,
+        heading: loc?.heading
+      } 
+ 
+      if (user) { 
+          console.log('sending accept to', user)
+          io.to(user.socketId).emit("location:update", sentLoc);
+      }
+    }catch(error){
+      console.log(error);
+    }
+    }); 
+
 
 
     

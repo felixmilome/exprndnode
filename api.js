@@ -262,6 +262,160 @@ router.post(authRoute + "/login", async (req, res) => {
     });
   }
 });
+
+
+router.post(authRoute + "/change-password", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    console.log(req.body);  
+ 
+    //1. Validate body
+    if (!email?.length>0 || !password?.length>0 ) {
+      return res.status(201).json({ success:false, message: "email, password and account_type are required" });
+    }
+
+
+    // // 2. Check if email exists
+    const existingUser = await sql`
+      SELECT id FROM users WHERE email = ${email};
+    `;
+
+    // 3. If exists return error
+    if (!existingUser.length > 0) {
+      return res.status(201).json({
+        message: `Account ${email} doesn't exists`,
+        success:false,
+        statuscode: 409
+      });
+    }
+
+    // 4. Hash password
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // 5. Create 5 character hexadecimal OTP
+   const otp = crypto.randomBytes(3).toString("hex").slice(0, 5).toUpperCase(); // e.g. "A3F9C"
+
+    // 6. Sign OTP JWT (for verification later)
+    const otp_token = jwt.sign({ email, password_hash }, otp, { expiresIn: "10m" });
+
+    // 7. Store user in users table
+    const updatedUser = await sql`
+      UPDATE users
+      SET otp_token = ${otp_token}
+      WHERE email = ${email}
+      RETURNING id, email;
+    `;
+
+    const user = updatedUser[0];
+
+
+    console.log(`OTP for ${email}: ${otp}`);
+
+
+    // 13. Return response
+    return res.status(201).json({
+      success:true, 
+      email: user.email,
+      //session_token,
+      statuscode: 201
+    });
+
+  } catch (error) {
+    console.error("Signup error:", error);
+    return res.status(201).json({
+      error: "Internal Server Error",
+      success:false,
+      message:"Internal Server Error"
+    });
+  }
+});
+
+router.post(authRoute + "/verify-password", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // 1. Validate input
+    if (!email || !otp) {
+      return res.status(201).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    // 2. Fetch user by email
+    const users = await sql`
+      SELECT id, email, otp_token FROM users WHERE email = ${email};
+    `;
+
+    if (users.length === 0) {
+      return res.status(201).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const user = users[0];
+
+    if (!user.otp_token) {
+      return res.status(201).json({
+        success: false,
+        message: "No OTP request found",
+      });
+    }
+
+    let decoded;
+
+    // 3. Verify OTP + decode token
+    try {
+      decoded = jwt.verify(user.otp_token, otp); 
+      // payload should contain { password_hash }
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(201).json({
+          success: false,
+          message: "OTP expired",
+        });
+      }
+
+      return res.status(201).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    const password_hash = decoded && decoded.password_hash;
+
+    if (!password_hash) {
+      return res.status(201).json({
+        success: false,
+        message: "Invalid token payload",
+      });
+    }
+
+    // 4. Update password + clear OTP
+    await sql`
+      UPDATE users
+      SET password_hash = ${password_hash},
+          otp_token = NULL
+      WHERE id = ${user.id};
+    `;
+
+    // 5. Success
+    return res.status(201).json({
+      success: true,
+      message: "Password updated successfully",
+      email: user.email
+    });
+
+  } catch (error) {
+    console.error("Verify-password error:", error);
+    return res.status(201).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
  
 
 router.get(userRoute, async (req, res) => {
