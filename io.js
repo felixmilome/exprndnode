@@ -39,9 +39,9 @@ export default function setupSocket(io) {
 
     // Send hello message to a specific user
     socket.on("send_hello", (email) => {
-      try{
+      try{ 
       const user = users.find((u) => u?.email === email);
-     // console.log({user})
+      console.log({users})
       if (user) {
         io.to(user.socketId).emit("hello", `Hello from ${user?.email}!`);
       }
@@ -203,6 +203,27 @@ export default function setupSocket(io) {
       if (user) { 
           console.log('sending accept to', user)
           io.to(user.socketId).emit("location:update", sentLoc);
+      }
+    }catch(error){
+      console.log(error);
+    }
+    }); 
+     socket.on("user:location:updater", (loc) => { 
+      try{
+        //console.log({loc})
+        // console.log({users})
+ 
+      const user = users.find(u => u.user_id === loc?.recepient_id);
+
+      const sentLoc = {
+        latitude: loc?.latitude,
+        longitude: loc?.longitude,
+        heading: loc?.heading
+      } 
+ 
+      if (user) { 
+          console.log('sending loc', user)
+          io.to(user.socketId).emit("location:updater", sentLoc);
       }
     }catch(error){
       console.log(error);
