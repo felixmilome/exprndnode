@@ -15,7 +15,9 @@ const userRoute = "/user"
 const driverRoute = "/driver"
 const rideRoute = "/ride"
 const reviewsRoute = "/reviews" 
-const locationRoute = "/location" 
+const locationRoute = "/location"
+const messagesRoute = "/messages"  
+
 
 // login
 
@@ -854,6 +856,66 @@ router.post(reviewsRoute, async (req, res) => {
   } catch (error) {
     console.error("Error updating user location:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// MESSAGES ================================================
+
+router.post("/messages", async (req, res) => {
+  try {
+    const {
+      ride_id,
+      sender_id,
+      receiver_id,
+      text,
+      type = 0,
+    } = req.body;
+
+    // Basic validation
+    if (!ride_id || !sender_id || !receiver_id || !text) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // 1. Check if chat already exists for this ride
+    const chatResult = await sql.query(
+      `SELECT * FROM chats WHERE ride_id = $1 LIMIT 1`,
+      [ride_id]
+    );
+
+    let chat;
+
+    // 2. If chat exists, use it
+    if (chatResult.length > 0) {
+      chat = chatResult[0];
+    } 
+    // 3. Otherwise create a new chat
+    else {
+      const newChatResult = await sql.query(
+        `INSERT INTO chats (participant_one_id, participant_two_id, ride_id)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [sender_id, receiver_id, ride_id]
+      );
+
+      chat = newChatResult[0];
+    }
+
+    // 4. Insert message with chat_id
+    const messageResult = await sql.query(
+      `INSERT INTO messages 
+        (chat_id, sender_id, receiver_id, text, type, ride_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [chat.id, sender_id, receiver_id, text, type, ride_id]
+    );
+
+    return res.status(201).json({
+      message: messageResult[0],
+    });
+
+  } catch (error) {
+    console.error("Error creating message:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

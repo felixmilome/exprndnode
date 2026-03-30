@@ -231,6 +231,22 @@ export default function setupSocket(io) {
     }); 
 
 
+    // MESSAGES =============
+
+    socket.on("send:message", (message) => {
+      try{
+  
+      const user = users.find((u) =>  u.user_id === message?.receiver_id);
+      if (user) {
+           console.log('sending new message ', user)
+        io.to(user.socketId).emit("on:message", message); 
+      }
+    }catch(error){
+      console.log(error);
+    }
+    }); 
+
+
 
     
   
