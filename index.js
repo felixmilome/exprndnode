@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 
 import apiRoutes from "./api.js";
+import v1Routes from "./apiv1.js";
 import setupSocket from "./io.js";
 import os from "os";
 
@@ -16,6 +17,9 @@ app.use(express.json());
 
 // REST API
 app.use("/api", apiRoutes);
+
+// Ambulance API's
+app.use("/v1/api", v1Routes);
 
 // Socket.IO
 // Socket.IO
