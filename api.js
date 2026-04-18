@@ -713,10 +713,203 @@ router.get(driverRoute, async (req, res) => {
       res.status(500).json({ error: "Internal Server Error" });
     }
   }); 
+
+router.get(rideRoute + "/my-rides/:id/:type", async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const type = Number(req.params.type);
+
+    if (!userId && userId !== 0) {
+      return res.status(400).json({ error: "Missing userId" });
+    }
+
+    const rides = await sql`
+      SELECT 
+        rides.*,
+
+        json_build_object(
+          'id', client.id,
+          'name', client.name,
+          'phone', client.phone,
+          'image_slug', client.image_slug
+        ) AS client_data,
+
+        json_build_object(
+          'id', driver.id,
+          'name', driver.name, 
+          'phone', driver.phone,
+          'image_slug', driver.image_slug,
+          'latitude', driver.current_latitude,
+          'longitude', driver.current_longitude,
+          'address', driver.current_address
+        ) AS driver_data
+
+      FROM rides
+      LEFT JOIN users client ON client.id = rides.client_id
+      LEFT JOIN users driver ON driver.id = rides.rider_id
+
+      WHERE 
+        (
+          ${type} = 0 AND rides.client_id = ${userId}
+        )
+        OR
+        (
+          ${type} = 1 AND rides.rider_id = ${userId}
+        )
+        OR
+        (
+          ${type} = 2 AND rides.hospital_id = ${userId}
+        )
+
+      ORDER BY rides.requested_at DESC;
+    `;
+    console.log(rides);
+
+    return res.json({ data: rides });
+
+  } catch (error) {
+    console.error("Error fetching rides:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// router.get(rideRoute + "/my-rides/:id/:type", async (req, res) => {
+//   try {
+//     console.log("ridsyy");
+
+//     const userId = Number(req?.params?.id);
+//     const type = Number(req?.params?.type);
+
+//     if (!userId && userId !== 0) {
+//       return res.status(400).json({ error: "Missing userId" });
+//     }
+
+//     let rides = [];
+
+//     // =========================
+//     // TYPE 0 → client_id
+//     // =========================
+//     if (type === 0) {
+//       rides = await sql`
+//         SELECT 
+//           rides.*,
+
+//           json_build_object(
+//             'id', client.id,
+//             'name', client.name,
+//             'phone', client.phone,
+//             'image_slug', client.image_slug
+//           ) AS client_data,
+
+//           json_build_object(
+//             'id', driver.id,
+//             'name', driver.name,
+//             'phone', driver.phone,
+//             'vehicle_type', driver.vehicle_type,
+//             'image_slug', driver.image_,
+//             'latitude', driver.latitude,
+//             'longitude', driver.longitude,
+//             'address', driver.address
+//           ) AS driver_data
+
+//         FROM rides
+//         LEFT JOIN users client ON client.id = rides.client_id
+//         LEFT JOIN users driver ON driver.id = rides.rider_id
+//         WHERE rides.client_id = ${userId}
+//         ORDER BY rides.requested_at DESC;
+//       `;
+//     }
+
+//     // =========================
+//     // TYPE 1 → rider_id
+//     // =========================
+//     else if (type === 1) {
+//       rides = await sql`
+//         SELECT 
+//           rides.*,
+
+//           json_build_object(
+//             'id', client.id,
+//             'name', client.first_name,
+//             'phone', client.phone,
+//             'image_slug', client.profile_image_url
+//           ) AS client_data,
+
+//           json_build_object(
+//             'id', driver.id,
+//             'name', driver.first_name,
+//             'phone', driver.phone,
+//             'vehicle_type', driver.vehicle_type,
+//             'image_slug', driver.profile_image_url,
+//             'latitude', driver.latitude,
+//             'longitude', driver.longitude,
+//             'address', driver.address
+//           ) AS driver_data
+
+//         FROM rides
+//         LEFT JOIN users client ON client.id = rides.client_id
+//         LEFT JOIN users driver ON driver.id = rides.rider_id
+//         WHERE rides.rider_id = ${userId}
+//         ORDER BY rides.requested_at DESC;
+//       `;
+//     }
+
+//     // =========================
+//     // TYPE 2 → hospital_id
+//     // =========================
+//     else if (type === 2) {
+//       rides = await sql`
+//         SELECT 
+//           rides.*,
+
+//           json_build_object(
+//             'id', client.id,
+//             'name', client.name,
+//             'phone', client.phone,
+//             'image_slug', client.profile_image_url
+//           ) AS client_data,
+
+//           json_build_object(
+//             'id', driver.id,
+//             'name', driver.name,
+//             'phone', driver.phone,
+//             'vehicle_type', driver.vehicle_type,
+//             'image_slug', driver.image_slug,
+//             'latitude', driver.latitude,
+//             'longitude', driver.longitude,
+//             'address', driver.address
+//           ) AS driver_data
+
+//         FROM rides
+//         LEFT JOIN users client ON client.id = rides.client_id
+//         LEFT JOIN users driver ON driver.id = rides.rider_id
+//         WHERE rides.hospital_id = ${userId}
+//         ORDER BY rides.requested_at DESC;
+//       `;
+//     }
+
+//     // =========================
+//     // INVALID TYPE
+//     // =========================
+//     else {
+//       return res.status(400).json({ error: "Invalid type" });
+//     }
+
+//     // =========================
+//     // RESPONSE
+//     // =========================
+//     return res.json({ data: rides });
+
+//   } catch (error) {
+//     console.error("Error fetching rides:", error);
+//     return res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
   
 router.post(rideRoute, async (req, res) => {
   try {
     const ride = req.body;
+  
 
     if (!ride) {
       return res.status(400).json({ error: "Missing required fields" });

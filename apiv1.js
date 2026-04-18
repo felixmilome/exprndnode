@@ -418,7 +418,124 @@ router.post(authRoute + "/verify-password", async (req, res) => {
     });
   }
 });
- 
+
+router.get(authRoute + "/token/:hospital_id", async (req, res) => { 
+  try {
+    console.log('yuhuu')
+    const { hospital_id } = req.params;
+    console.log({hospital_id})
+
+    // 1. Fetch hospital
+    const hospitals = await sql`
+      SELECT id
+      FROM hospitals
+      WHERE id = ${parseInt(hospital_id)};
+    `;
+
+
+    if (hospitals.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Fleet/Hospital not found",
+      });
+    }
+
+    // 2. Fetch api_key
+    const existingKey = await sql`
+      SELECT api_key FROM api_keys
+      WHERE hospital_id = ${parseInt(hospital_id)};
+    `;
+
+    if (existingKey.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No API key found for this hospital",
+      });
+    }
+
+    const token = existingKey[0].api_key;
+
+    // 3. Return response
+    return res.status(200).json({
+      success: true,
+      message: "Token fetched successfully",
+      token,
+    });
+
+  } catch (error) {
+    console.error("Token fetch error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
+
+
+router.post(authRoute + "/token", async (req, res) => { 
+  try {
+    const { hospital_id } = req.body;
+
+    // 1. Fetch hospital
+    const hospitals = await sql`
+      SELECT id, user_id
+      FROM hospitals
+      WHERE id = ${parseInt(hospital_id)};
+    `;
+
+    if (hospitals.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Fleet/Hospital not found",
+      });
+    }
+
+    const hospital = hospitals[0];
+    const admin_id = hospital.user_id;
+
+    // 2. Create JWT
+    const token = jwt.sign(
+      { admin_id, hospital_id },
+      JWT_SECRET
+    );
+
+    // 3. Check if api_key already exists for this hospital
+    const existingKey = await sql`
+      SELECT id FROM api_keys
+      WHERE hospital_id = ${hospital_id};
+    `;
+
+    if (existingKey.length > 0) {
+      // 4a. Update existing key
+      await sql`
+        UPDATE api_keys
+        SET api_key = ${token},
+            created_at = CURRENT_TIMESTAMP
+        WHERE hospital_id = ${hospital_id};
+      `;
+    } else {
+      // 4b. Insert new key
+      await sql`
+        INSERT INTO api_keys (admin_id, hospital_id, api_key)
+        VALUES (${admin_id}, ${hospital_id}, ${token});
+      `;
+    }
+
+    // 5. Return response
+    return res.status(200).json({
+      success: true,
+      message: "Token successful",
+      token,
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
 
 router.get(userRoute, async (req, res) => {
   try {
