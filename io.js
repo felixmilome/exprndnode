@@ -47,7 +47,8 @@ export default function setupSocket(io) {
       }
     }catch(error){
       console.log(error);
-    }
+    } 
+    
     });
 
     socket.on("driverLocation", ({email, data}) => {
